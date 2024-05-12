@@ -106,14 +106,13 @@ class FirebaseAdapter extends BaseAdapter {
         this._logout = this._auth.onAuthStateChanged(user => {
             if (user) {
                 this._login(user);
+                this.trigger('auth', this.get_user());
             }
         });
         this._events = {};
     }
     _login(user) {
         this._user = user;
-        console.log(user);
-        this.trigger('auth', this.get_user());
     }
     trigger(event, ...args) {
         if (this._events[event]) {
@@ -233,14 +232,14 @@ class Terminal extends BaseRenderer {
         this._adapter = adapter;
         this._term.pause();
         const term = this._term;
-        
+
         this._view = term.export_view();
-        
+
         const formatter = new Intl.ListFormat('en', {
             style: 'long',
             type: 'conjunction',
         });
-        
+
         adapter.on('auth', (username) => {
             this.log(`You're authenticated as ${username}`);
         })
@@ -250,11 +249,10 @@ class Terminal extends BaseRenderer {
             const formatted = rooms.map(room => `<white class="room">${room}</white>`);
             return formatter.format(formatted);
         }
-        
+
         const prompt = '[[;#3AB4DB;]dialogue]> ';
         const color = '#D58315';
-        
-        
+
         function render_greetings() {
             term.echo($.terminal.figlet(font, 'dialogue', { color }), {
                 ansi: true
@@ -262,7 +260,7 @@ class Terminal extends BaseRenderer {
             term.echo(`[[b;#4889F1;]Web-Terminal Chat v.${Dialogue.version}]\n`);
             term.echo(async () => `Available rooms: ${await rooms()}`);
         }
-        
+
         this._greetings = () => {
             // new FIGLET API
             return $.terminal.figlet.load([font]).then(render_greetings);
@@ -323,11 +321,11 @@ class Dialogue {
         }
 
         adapter.set({ render: render_message });
-        
+
         let room;
-        
+
         unpromise(renderer.init(adapter, system), ready);
-        
+
         async function system(command, args) {
             switch(command) {
                 case '/login':
