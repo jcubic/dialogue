@@ -31,5 +31,5 @@ const dialogue = new Dialogue({
 ```
 
 ## License
-Copyright (c) 2024 [Jakub Jankiewicz](https://jakub.jankiewicz.org/)<br/>
+Copyright (c) 2024 [Jakub T. Jankiewicz](https://jakub.jankiewicz.org/)<br/>
 Released under [AGPL v3 license](https://github.com/jcubic/dialogue/blob/master/LICENSE)
