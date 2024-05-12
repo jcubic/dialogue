@@ -35,9 +35,12 @@ const dialogue = new Dialogue({
 - [ ] Online users per room
 - [ ] UI
   - [ ] React
+  - [ ] Terminal
+    - [ ] chat command
 - [ ] Adapters
   - [ ] Server-Sent Events
   - [ ] Web Sockets
+- [ ] Add a way to obtain a commerial License
 
 ## License
 Copyright (c) 2024 [Jakub T. Jankiewicz](https://jakub.jankiewicz.org/)<br/>
