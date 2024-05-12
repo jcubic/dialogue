@@ -1,6 +1,6 @@
 # Dialogue
 
-Chat JavaScript Open Source library
+[Chat JavaScript Open Source library](https://jcubic.github.io/dialogue/)
 
 ## Usage
 
