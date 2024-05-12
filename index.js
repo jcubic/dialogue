@@ -100,15 +100,68 @@ class FirebaseAdapter extends BaseAdapter {
         firebase.initializeApp(firebase_config);
         this._database = firebase.database();
         this._messages = this._database.ref(ref);
+        this._auth = firebase.auth();
         this._rooms = {};
         this._current_room;
+        this._logout = this._auth.onAuthStateChanged(user => {
+            if (user) {
+                this._login(user);
+            }
+        });
+        this._events = {};
+    }
+    _login(user) {
+        this._user = user;
+        console.log(user);
+        this.trigger('auth', this.get_user());
+    }
+    trigger(event, ...args) {
+        if (this._events[event]) {
+            this._events[event].forEach(handler => {
+                handler(...args);
+            });
+        }
+    }
+    on(event, handler) {
+        this._events[event] ??= [];
+        this._events[event].push(handler);
+    }
+    logout() {
+        this._logout();
     }
     get_user() {
-        return this._username;
+        if (!this._user) {
+            throw new Error(`you're not authenticated`);
+        }
+        return this._user.displayName;
     }
-    auth(provider) {
-        // Temporary
-        this._username = provider;
+    get_auth_provider(name) {
+        switch(name) {
+            case 'google':
+                return new firebase.auth.GoogleAuthProvider();
+            case 'twitter':
+                return new firebase.auth.TwitterAuthProvider();
+            case 'github':
+                return new firebase.auth.GithubAuthProvider();
+            case 'facebook':
+                return new firebase.auth.FacebookAuthProvider();
+            default:
+                throw new Error('Unknown provider');
+        }
+    }
+    is_suppoted_provider(name) {
+        return name.match(/^(google|twitter|github|facebook)$/)
+    }
+    async auth(provider_name) {
+        if (this.is_suppoted_provider(provider_name)) {
+            const provider = this.get_auth_provider(provider_name);
+            const result = await this._auth.signInWithPopup(provider);
+            if (result) {
+                var credential = result.credential;
+                //token = credential.accessToken;
+                this._login(result.user);
+            }
+        }
     }
     quit(room = null) {
         if (room === null) {
@@ -187,6 +240,10 @@ class Terminal extends BaseRenderer {
             style: 'long',
             type: 'conjunction',
         });
+        
+        adapter.on('auth', (username) => {
+            this.log(`You're authenticated as ${username}`);
+        })
 
         async function rooms() {
             const rooms = await adapter.rooms();
@@ -219,7 +276,7 @@ class Terminal extends BaseRenderer {
                     this.enter(command);
                 }
                 const { name, args } = $.terminal.parse_command(command);
-                system_command(name, args);
+                return system_command(name, args);
             } else {
                 const username = adapter.get_user();
                 if (username) {
@@ -238,12 +295,15 @@ class Terminal extends BaseRenderer {
         });
     }
     join(room) {
-        this._term.echo(`Wellcome to <white>${room}</white> room`);
+        this.log(`Welcome to ${room} room`);
     }
     quit() { }
     render({ username, datetime, message }) {
         const time = format_time(datetime);
         this._term.echo(`[${time}]<${color(username)}> ${message}`);
+    }
+    log(message) {
+        this._term.echo(`[[i;#A528B9;]${message}]`);
     }
 }
 
@@ -272,7 +332,7 @@ class Dialogue {
             switch(command) {
                 case '/login':
                     const [provider] = args;
-                    adapter.auth(provider);
+                    await adapter.auth(provider);
                     break;
                 case '/join':
                     [room] = args;
