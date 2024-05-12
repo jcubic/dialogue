@@ -1,7 +1,7 @@
 const font = 'ANSI Shadow';
 
 function trim(str) {
-    return str.replace(/[\s\n]+$/, '');
+    return str.replace(/[\s\n]+$/, '').replace(/^\s+\n/, '');
 }
 
 $.terminal.figlet = function(font, text, { color = null, ...options } = {}) {
@@ -342,6 +342,16 @@ class Terminal extends BaseRenderer {
             return $.terminal.figlet.load([font]).then(render_greetings);
         };
         await this._greetings();
+        function send_message(message) {
+            const username = adapter.get_user();
+            if (username) {
+                const date = utc_now();
+                adapter.send(username, date, message);
+            } else {
+                this.enter(message).error('Auth required');
+            }
+        }
+        const commands = ['/figlet', '/image'];
         term.set_interpreter(function(command) {
             const echo_command = this.option('echoCommand');
             this.option('echoCommand', false);
@@ -350,15 +360,13 @@ class Terminal extends BaseRenderer {
                     this.enter(command);
                 }
                 const { name, args } = $.terminal.parse_command(command);
-                return system_command(name, args);
-            } else {
-                const username = adapter.get_user();
-                if (username) {
-                    const date = utc_now();
-                    adapter.send(username, date, command);
+                if (commands.includes(name)) {
+                    send_message(`##COMMAND:${command}`);
                 } else {
-                    this.enter(command).error('Auth required');
+                    return system_command(name, args);
                 }
+            } else {
+                send_message(command);
             }
         });
         term.set_prompt(prompt);
@@ -377,8 +385,57 @@ class Terminal extends BaseRenderer {
     }
     quit() { }
     render({ username, datetime, message }) {
-        const time = format_time(datetime);
-        this._term.echo(`[${time}]<${color(username)}> ${message}`);
+        function format(message) {
+            const time = format_time(datetime);
+            const prefix = `[${time}]<${color(username)}> `;
+            const lines = message.split('\n');
+            if (lines.length == 1) {
+                return prefix + message;
+            } else {
+                const space = ' '.repeat($.terminal.length(prefix));
+                return lines.map((line, i) => {
+                    if (i === 0) {
+                        return prefix + line;
+                    } else {
+                        return space + line;
+                    }
+                }).join('\n');
+            }
+        }
+        if (typeof message === 'function') {
+            this._term.echo(function() {
+                return format(message.call(this));
+            });
+        } else if (message.startsWith('##COMMAND:')) {
+            const command = message.replace(/##COMMAND:/, '');
+            const { name, args } = $.terminal.parse_command(command);
+            switch(name) {
+                case '/image':
+                    const {
+                        src,
+                        alt
+                    } = $.terminal.parse_options(args);
+                    this.render({ username, datetime, message: `<img src="${src}" alt="${alt}"/>` });
+                    break;
+                case '/figlet':
+                    const {
+                        _: fig_args,
+                        font = 'Standard',
+                        color
+                    } = $.terminal.parse_options(args);
+                    this._term.echo(() => {
+                        return $.terminal.figlet.load([font]).then(() => {
+                            const ascii = $.terminal.figlet(font, fig_args.join(' '), { color });
+                            return format(ascii.call(this._term));
+                        });
+                    });
+                    break;
+                default:
+                    console.warn(`Invalid command: ${command} SKIP`);
+            }
+        } else {
+            this._term.echo(format(message));
+        }
     }
     log(message) {
         this._term.echo(`[[i;#A528B9;]${message}]`);
