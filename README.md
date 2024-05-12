@@ -27,8 +27,17 @@ const dialogue = new Dialogue({
         term.exec('/join general');
     }
 });
-
 ```
+
+## Todo
+- [ ] Notifications
+- [ ] Sound Notifications
+- [ ] Online users per room
+- [ ] UI
+  - [ ] React
+- [ ] Adapters
+  - [ ] Server-Sent Events
+  - [ ] Web Sockets
 
 ## License
 Copyright (c) 2024 [Jakub T. Jankiewicz](https://jakub.jankiewicz.org/)<br/>
