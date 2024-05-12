@@ -95,24 +95,74 @@ const color = (function() {
 class BaseAdapter { }
 
 class FirebaseAdapter extends BaseAdapter {
-    constructor(firebase_config, ref = 'messages') {
+    constructor(firebase_config) {
         super();
         firebase.initializeApp(firebase_config);
         this._database = firebase.database();
-        this._messages = this._database.ref(ref);
+        this._messages = this._database.ref('messages');
+        this._users = this._database.ref('users');
         this._auth = firebase.auth();
         this._rooms = {};
         this._current_room;
         this._logout = this._auth.onAuthStateChanged(user => {
             if (user) {
                 this._login(user);
-                this.trigger('auth', this.get_user());
+                let username = user.displayName;
+                const ref = this._database.ref(`/users/${user.uid}`);
+                ref.once('value').then(snapshot => {
+                    const payload = { };
+                    if (!snapshot.exists()) {
+                        payload.username = username;
+                        payload.counter = 1;
+                        ref.update(payload);
+                    } else {
+                        username = snapshot.val().username;
+                        this._username = username;
+                        ref.child('counter').transaction(prev => {
+                            return (prev || 0) + 1;
+                        });
+                    }
+                    ref.onDisconnect().set({
+                        'counter': firebase.database.ServerValue.increment(-1),
+                        username: this.get_user()
+                    });
+                    this.trigger('auth', this.get_user());
+                });
             }
         });
         this._events = {};
     }
+    users() {
+        return this._users.once('value').then(snapshot => {
+            const users = Object.values(snapshot.val());
+
+            console.log(users);
+
+            return users.filter(user => {
+                return user.counter > 0;
+            }).map(user => {
+                return user.username;
+            });
+        });
+    }
+    uid() {
+        if (!this._user) {
+            return null;
+        }
+        return this._user.uid;
+    }
     _login(user) {
         this._user = user;
+    }
+    is_valid_name(username) {
+        return this._users.once('value').then(snapshot => {
+            const users = snapshot.val();
+
+            const uid = this.uid();
+            return !Object.entries(users).find(([key, user]) => {
+                return user.username === username && key !== uid;
+            });
+        });
     }
     trigger(event, ...args) {
         if (this._events[event]) {
@@ -132,7 +182,22 @@ class FirebaseAdapter extends BaseAdapter {
         if (!this._user) {
             throw new Error(`you're not authenticated`);
         }
-        return this._user.displayName;
+        return this._username || this._user.displayName;
+    }
+    async set_nick(username) {
+        username = username.trim();
+        if (!username) {
+            throw new Error(`Nick can't be empty`);
+        }
+        if (await this.is_valid_name(username)) {
+            this._users.child(this.uid()).update({
+                username
+            });
+            this._username = username;
+            this.trigger('nick', this.get_user());
+        } else {
+            throw new Error(`name ${username} is already taken`);
+        }
     }
     get_auth_provider(name) {
         switch(name) {
@@ -240,14 +305,25 @@ class Terminal extends BaseRenderer {
             type: 'conjunction',
         });
 
-        adapter.on('auth', (username) => {
+        adapter.on('auth', username => {
             this.log(`You're authenticated as ${username}`);
         })
+        adapter.on('nick', username => {
+            this.log(`You're now known as ${username}`);
+        });
 
         async function rooms() {
             const rooms = await adapter.rooms();
             const formatted = rooms.map(room => `<white class="room">${room}</white>`);
             return formatter.format(formatted);
+        }
+
+        this._users = async function users() {
+            const users = await adapter.users();
+            if (users.length) {
+                return formatter.format(users);
+            }
+            return '';
         }
 
         const prompt = '[[;#3AB4DB;]dialogue]> ';
@@ -292,8 +368,12 @@ class Terminal extends BaseRenderer {
             term.exec(`/join ${room}`);
         });
     }
-    join(room) {
+    async join(room) {
         this.log(`Welcome to ${room} room`);
+        const users = await this._users();
+        if (users) {
+            this.log(`Users online: ${users}`);
+        }
     }
     quit() { }
     render({ username, datetime, message }) {
@@ -332,11 +412,15 @@ class Dialogue {
                     const [provider] = args;
                     await adapter.auth(provider);
                     break;
+                case '/nick':
+                    const [nick] = args;
+                    return adapter.set_nick(nick);
+                    break;
                 case '/join':
                     [room] = args;
                     if (room) {
-                        await renderer.join(room);
                         await adapter.join(room);
+                        await renderer.join(room);
                     }
                     break;
                 case '/quit':
@@ -374,12 +458,10 @@ const firebase_config = {
 };
 
 (function() {
-    const term = $('body').terminal(function(command) {
-        const { name } = $.terminal.parse_command(command);
-        if (name === 'chat') {
-            chat.command(this, make_chat());
-        }
-    }, {
+    const term = $('body').terminal($.noop, {
+        exceptionHandler(e) {
+            this.error(`Error: ${e.message}`);
+        },
         greetings: false
     });
 
