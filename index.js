@@ -380,6 +380,9 @@ class Terminal extends BaseRenderer {
             this.log(`Users online: ${users}`);
         }
     }
+    echo(message) {
+        this._term.echo(message);
+    }
     quit() { }
     render({ username, datetime, message }) {
         function format(message) {
@@ -458,13 +461,17 @@ class Dialogue {
 
         let room;
 
-        unpromise(renderer.init(adapter, system), ready);
+        unpromise(renderer.init({ adapter, system, ...args }), ready);
 
         async function system(command, args) {
             switch(command) {
                 case '/login':
-                    const [provider] = args;
-                    await adapter.auth(provider);
+                    if (args.length === 0) {
+                        renderer.echo('<red>error: Auth argument missing, supported auth: google</red>');
+                    } else {
+                        const [provider] = args;
+                        await adapter.auth(provider);
+                    }
                     break;
                 case '/nick':
                     const [nick] = args;
@@ -484,6 +491,8 @@ class Dialogue {
                         room = null;
                     }
                     break;
+                case '/help':
+                    renderer.echo('Yet to be implemented');
                 case '/notify':
                     break;
 
