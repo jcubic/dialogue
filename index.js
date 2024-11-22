@@ -46,6 +46,10 @@ function is_system_command(command) {
     return command.match(/^\s*\/[^\s]+/);
 }
 
+function is_function(object) {
+    return typeof object === 'function';
+}
+
 function utc_now() {
     const date = new Date();
     return Date.UTC(
@@ -549,7 +553,7 @@ const firebase_config = {
         },
         prompt: `[[;${color};]chat]> `,
         ready() {
-            term.exec('/join terminal');
+            term.exec('/join general');
         }
     });
 })();
