@@ -289,7 +289,7 @@ class Terminal extends BaseRenderer {
         super();
         this._term = terminal;
     }
-    async init(adapter, system_command) {
+    async init({ adapter, system: system_command, greetings, prompt: user_prompt } = {}) {
         this._adapter = adapter;
         this._term.pause();
         const term = this._term;
@@ -322,7 +322,7 @@ class Terminal extends BaseRenderer {
             return '';
         }
 
-        const prompt = '[[;#3AB4DB;]dialogue]> ';
+        const prompt = user_prompt ?? '[[;#3AB4DB;]dialogue]> ';
         const color = '#D58315';
         const font = 'ANSI Shadow';
 
@@ -335,8 +335,16 @@ class Terminal extends BaseRenderer {
         }
 
         this._greetings = () => {
-            // new FIGLET API
-            return $.terminal.figlet.load([font]).then(render_greetings);
+            if (greetings) {
+                if (is_function(greetings)) {
+                    return greetings.call(term);
+                } else {
+                    term.echo(greetings);
+                }
+            } else {
+                // new FIGLET API
+                return $.terminal.figlet.load([font]).then(render_greetings);
+            }
         };
         await this._greetings();
         function send_message(message) {
@@ -444,7 +452,7 @@ class Terminal extends BaseRenderer {
 
 class Dialogue {
     static version = '0.1.0';
-    constructor({ adapter, renderer, ready }) {
+    constructor({ adapter, renderer, ready, ...args }) {
         if (!(adapter instanceof BaseAdapter)) {
             renderer.error(new Error('Adapter needs to be instance of BaseAdapter'));
             return;
@@ -528,11 +536,20 @@ const firebase_config = {
         greetings: false
     });
 
+    const color = '#257cc2';
+    const font = 'ANSI Shadow';
     const dialogue = new Dialogue({
         adapter: new FirebaseAdapter(firebase_config),
         renderer: new Terminal(term),
-        ready: () => {
-            term.exec('/join general');
+        async greetings() {
+            await $.terminal.figlet.load([font]);
+            term.echo($.terminal.figlet(font, 'Chat', { color }), {
+                ansi: true
+            });
+        },
+        prompt: `[[;${color};]chat]> `,
+        ready() {
+            term.exec('/join terminal');
         }
     });
 })();
