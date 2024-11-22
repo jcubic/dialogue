@@ -1,5 +1,3 @@
-const font = 'ANSI Shadow';
-
 function trim(str) {
     return str.replace(/[\s\n]+$/, '').replace(/^\s+\n/, '');
 }
@@ -20,7 +18,7 @@ $.terminal.figlet = function(font, text, { color = null, ...options } = {}) {
         return '[[;' + color + ';]' + result + ']';
     };
 };
-const fontpath = 'https://unpkg.com/figlet/fonts/';
+const fontpath = 'https://cdn.jsdelivr.net/npm/figlet/fonts';
 
 function all_include(items, list) {
     return items.every(item => list.includes(item));
@@ -328,6 +326,7 @@ class Terminal extends BaseRenderer {
 
         const prompt = '[[;#3AB4DB;]dialogue]> ';
         const color = '#D58315';
+        const font = 'ANSI Shadow';
 
         function render_greetings() {
             term.echo($.terminal.figlet(font, 'dialogue', { color }), {
