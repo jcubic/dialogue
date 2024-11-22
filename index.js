@@ -27,21 +27,19 @@ function all_include(items, list) {
 $.terminal.figlet.load = function(fonts, fontPath = fontpath) {
     const installed = [];
     let last_path;
-    return (() => {
-        if (all_include(fonts, installed)) {
-            return Promise.resolve();
+    if (all_include(fonts, installed)) {
+        return Promise.resolve();
+    }
+    return new Promise(resolve => {
+        if (last_path !== fontPath) {
+            last_path = fontPath;
+            figlet.defaults({ fontPath });
         }
-        return new Promise(resolve => {
-            if (last_path !== fontPath) {
-                last_path = fontPath;
-                figlet.defaults({ fontPath });
-            }
-            figlet.preloadFonts(fonts, () => {
-                installed.push(...fonts);
-                resolve();
-            });
-        })
-    })();
+        figlet.preloadFonts(fonts, () => {
+            installed.push(...fonts);
+            resolve();
+        });
+    })
 }
 
 function is_system_command(command) {
