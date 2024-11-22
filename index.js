@@ -346,7 +346,7 @@ class Terminal extends BaseRenderer {
                 } else {
                     term.echo(greetings);
                 }
-            } else {
+            } else if (greetings === undefined) {
                 // new FIGLET API
                 return $.terminal.figlet.load([font]).then(render_greetings);
             }
@@ -541,18 +541,9 @@ const firebase_config = {
         greetings: false
     });
 
-    const color = '#257cc2';
-    const font = 'ANSI Shadow';
     const dialogue = new Dialogue({
         adapter: new FirebaseAdapter(firebase_config),
         renderer: new Terminal(term),
-        async greetings() {
-            await $.terminal.figlet.load([font]);
-            term.echo($.terminal.figlet(font, 'Chat', { color }), {
-                ansi: true
-            });
-        },
-        prompt: `[[;${color};]chat]> `,
         ready() {
             term.exec('/join general');
         }
