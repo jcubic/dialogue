@@ -18,6 +18,7 @@ $.terminal.figlet = function(font, text, { color = null, ...options } = {}) {
         return '[[;' + color + ';]' + result + ']';
     };
 };
+
 const fontpath = 'https://cdn.jsdelivr.net/npm/figlet/fonts';
 
 function all_include(items, list) {
@@ -400,6 +401,9 @@ class Terminal extends BaseRenderer {
         function format(message) {
             const time = format_time(datetime);
             const prefix = `[${time}]<${color(username)}> `;
+            message = message.replace(/```(.*)\n([\s\S]+)```/g, function(_, language, code) {
+                return $.terminal.prism(language, code);
+            });
             const lines = message.split('\n');
             if (lines.length == 1) {
                 return prefix + message;
@@ -423,10 +427,7 @@ class Terminal extends BaseRenderer {
             const { name, args } = $.terminal.parse_command(command);
             switch(name) {
                 case '/image':
-                    const {
-                        src,
-                        alt
-                    } = $.terminal.parse_options(args);
+                    const { src, alt } = $.terminal.parse_options(args);
                     this.render({ username, datetime, message: `<img src="${src}" alt="${alt}"/>` });
                     break;
                 case '/figlet':
