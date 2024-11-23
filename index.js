@@ -27,10 +27,10 @@ function all_include(items, list) {
 
 $.terminal.figlet.load = function(fonts, fontPath = fontpath) {
     const installed = [];
-    let last_path;
     if (all_include(fonts, installed)) {
         return Promise.resolve();
     }
+    let last_path;
     return new Promise(resolve => {
         if (last_path !== fontPath) {
             last_path = fontPath;
@@ -93,7 +93,54 @@ const color = (function() {
     }
 })();
 
-class BaseAdapter { }
+class EventEmitter {
+    constructor() {
+        this._events = {};
+    }
+    trigger(event, ...args) {
+        if (this._events[event]) {
+            this._events[event].forEach(handler => {
+                handler(...args);
+            });
+        }
+    }
+    on(event, handler) {
+        this._events[event] ??= [];
+        this._events[event].push(handler);
+    }
+    off(event, handler = null) {
+        if (handler) {
+            this._events[event] = this._events[event].filter(h => h !== handler);
+        } else {
+            delete this._events[event];
+        }
+    }
+}
+
+class BaseAdapter extends EventEmitter {
+    constructor() {
+        super();
+    }
+    async users() {
+        return [];
+    }
+    uid() {
+        return null;
+    }
+    logout() { }
+    get_user() {
+        return null;
+    }
+    async set_nick(username) { }
+    async auth(provider_name) { }
+    quit(room) { }
+    async rooms() {
+        return [];
+    }
+    join(room) { }
+    send(username, datetime, message) { }
+    set({ render }) { }
+}
 
 class FirebaseAdapter extends BaseAdapter {
     constructor(firebase_config) {
@@ -131,7 +178,6 @@ class FirebaseAdapter extends BaseAdapter {
                 });
             }
         });
-        this._events = {};
     }
     users() {
         return this._users.once('value').then(snapshot => {
@@ -164,17 +210,6 @@ class FirebaseAdapter extends BaseAdapter {
                 return user.username === username && key !== uid;
             });
         });
-    }
-    trigger(event, ...args) {
-        if (this._events[event]) {
-            this._events[event].forEach(handler => {
-                handler(...args);
-            });
-        }
-    }
-    on(event, handler) {
-        this._events[event] ??= [];
-        this._events[event].push(handler);
     }
     logout() {
         this._logout();
