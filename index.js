@@ -558,6 +558,10 @@ class Dialogue {
             renderer.render({ username, datetime, message });
         }
 
+        const favicon = new Favico({
+            animation: 'none'
+        });
+
         adapter.on('messages-count', (count) => {
             if (count === 0) {
                 favicon.reset();
