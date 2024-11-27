@@ -29,6 +29,33 @@ const dialogue = new Dialogue({
 });
 ```
 
+## Firebase rules
+
+To protect the data in your firebase real time database you can use thes rules:
+
+```
+{
+  "rules": {
+    "messages": {
+      ".read": true,
+      ".write": "auth != null",
+      "$messageId": {
+        ".write": "auth != null && auth.uid === data.child('userId').val()"
+      }
+    },
+    "users": {
+      ".read": true,
+      ".write": "auth != null",
+"$userId": {
+        ".write": "auth != null && auth.uid === $userId"
+      }
+    },
+    ".write": false,
+    ".read": false
+  }
+}
+```
+
 ## Todo
 - [ ] Notifications
 - [ ] Sound Notifications
