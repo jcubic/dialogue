@@ -97,7 +97,7 @@ class EventEmitter {
     constructor() {
         this._events = {};
     }
-    trigger(event, ...args) {
+    emit(event, ...args) {
         if (this._events[event]) {
             this._events[event].forEach(handler => {
                 handler(...args);
@@ -117,9 +117,49 @@ class EventEmitter {
     }
 }
 
+// create random string of 10 digits in javascript
+// https://stackoverflow.com/questions/1349404/generate-random-string-characters-in-javascript
+function rand() {
+    return Math.random().toString(36).substr(2, 10);
+}
+
 class BaseAdapter extends EventEmitter {
     constructor() {
         super();
+        this._rnd = rand();
+        this._unread_messages = 0;
+        this._focus = true;
+        this.on('message', (message) => {
+            console.log({
+                message,
+                rnd: this.random_id(),
+                var: this._focus,
+                focus: document.hasFocus()
+            });
+            if (message.rnd !== this.random_id() && !this._focus) {
+                console.log('unread message');
+                this._unread_messages++;
+                this.emit('messages-count', this._unread_messages);
+                this.emit('new-message', message);
+            }
+        });
+        document.addEventListener("visibilitychange", () => {
+            console.log('visibilitychange', in_focus());
+            this._focus = in_focus();
+            if (!this._focus) {
+                this.clear_unread();
+            }
+        });
+    }
+    clear_unread() {
+        this._unread_messages = 0;
+        this.emit('messages-count', 0);
+    }
+    unread_messages() {
+        return this._unread_messages;
+    }
+    random_id() {
+        return this._rnd;
     }
     async users() {
         return [];
@@ -174,7 +214,7 @@ class FirebaseAdapter extends BaseAdapter {
                         'counter': firebase.database.ServerValue.increment(-1),
                         username: this.get_user()
                     });
-                    this.trigger('auth', this.get_user());
+                    this.emit('auth', this.get_user());
                 });
             }
         });
@@ -182,8 +222,6 @@ class FirebaseAdapter extends BaseAdapter {
     users() {
         return this._users.once('value').then(snapshot => {
             const users = Object.values(snapshot.val());
-
-            console.log(users);
 
             return users.filter(user => {
                 return user.counter > 0;
@@ -230,7 +268,7 @@ class FirebaseAdapter extends BaseAdapter {
                 username
             });
             this._username = username;
-            this.trigger('nick', this.get_user());
+            this.emit('nick', this.get_user());
         } else {
             throw new Error(`name ${username} is already taken`);
         }
@@ -288,9 +326,15 @@ class FirebaseAdapter extends BaseAdapter {
         this._current_room = this._rooms[room];
         this._rooms[room].limitToLast(100).on('child_added', (snapshot) => {
             const data = snapshot.val();
-            const { message, username, datetime } = data;
+            const { message, username, datetime, rnd } = data;
             if (this._render) {
                 const date = new Date(datetime);
+                this.emit('message', {
+                    username,
+                    datetime,
+                    message,
+                    rnd
+                });
                 this._render(username, date, message);
             }
         });
@@ -302,7 +346,9 @@ class FirebaseAdapter extends BaseAdapter {
         const payload = {
             username,
             message,
-            datetime
+            datetime,
+            uuid: this.uid(),
+            rnd: this.random_id()
         };
         this._current_room.push(payload);
     }
@@ -317,6 +363,9 @@ class BaseRenderer {
     on_quit() { }
     render({ username, datetime, message }) {
         console.log({ username, datetime, message });
+    }
+    in_focus() {
+        return true;
     }
     error(e) {
         console.error(e.message);
@@ -454,7 +503,7 @@ class Terminal extends BaseRenderer {
             }
         }
         if (typeof message === 'function') {
-            this._term.echo(function() {
+            this.echo(function() {
                 return format(message.call(this));
             });
         } else if (message.startsWith('##COMMAND:')) {
@@ -471,7 +520,7 @@ class Terminal extends BaseRenderer {
                         font = 'Standard',
                         color
                     } = $.terminal.parse_options(args);
-                    this._term.echo(() => {
+                    this.echo(() => {
                         return $.terminal.figlet.load([font]).then(() => {
                             const ascii = $.terminal.figlet(font, fig_args.join(' '), { color });
                             return format(ascii.call(this._term));
@@ -482,12 +531,16 @@ class Terminal extends BaseRenderer {
                     console.warn(`Invalid command: ${command} SKIP`);
             }
         } else {
-            this._term.echo(format(message));
+            this.echo(format(message));
         }
     }
     log(message) {
-        this._term.echo(`[[i;#A528B9;]${message}]`);
+        this.echo(`[[i;#A528B9;]${message}]`);
     }
+}
+
+function in_focus() {
+    return document.visibilityState === 'visible';
 }
 
 class Dialogue {
@@ -504,6 +557,14 @@ class Dialogue {
         function render_message(username, datetime, message) {
             renderer.render({ username, datetime, message });
         }
+
+        adapter.on('messages-count', (count) => {
+            if (count === 0) {
+                favicon.reset();
+            } else {
+                favicon.badge(count);
+            }
+        });
 
         adapter.set({ render: render_message });
 
