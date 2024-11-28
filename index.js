@@ -104,6 +104,13 @@ class EventEmitter {
             });
         }
     }
+    once(event, handler) {
+        const wrapper = (...args) => {
+            handler(...args);
+            this.off(event, wrapper);
+        }
+        this.on(event, wrapper);
+    }
     on(event, handler) {
         this._events[event] ??= [];
         this._events[event].push(handler);
@@ -129,27 +136,29 @@ class BaseAdapter extends EventEmitter {
         this._rnd = rand();
         this._unread_messages = 0;
         this._focus = true;
+        this._now = Date.now();
         this.on('message', (message) => {
-            console.log({
-                message,
-                rnd: this.random_id(),
-                var: this._focus,
-                focus: document.hasFocus()
-            });
-            if (message.rnd !== this.random_id() && !this._focus) {
-                console.log('unread message');
+            console.log({ new: this.is_new_message(message) });
+            if (this.is_new_message(message)) {
                 this._unread_messages++;
                 this.emit('messages-count', this._unread_messages);
                 this.emit('new-message', message);
             }
         });
         document.addEventListener("visibilitychange", () => {
-            console.log('visibilitychange', in_focus());
             this._focus = in_focus();
+            this.emit('visiblity', this._focus);
             if (!this._focus) {
                 this.clear_unread();
             }
         });
+    }
+    is_new_message(message) {
+        if (this._now > message.datetime) {
+            return false;
+        }
+        console.log({ rnd: message.rnd, random_id: this.random_id(), focus: in_focus() });
+        return message.rnd !== this.random_id() && !in_focus();
     }
     clear_unread() {
         this._unread_messages = 0;
@@ -554,6 +563,9 @@ class Dialogue {
             renderer.error(new Error('Renderer needs to be instance of BaseRenderer'));
             return;
         }
+
+        const self = this;
+
         function render_message(username, datetime, message) {
             renderer.render({ username, datetime, message });
         }
@@ -567,6 +579,19 @@ class Dialogue {
                 favicon.reset();
             } else {
                 favicon.badge(count);
+            }
+        });
+
+        this._notify = Notification.permission === 'granted';
+
+        adapter.on('new-message', ({ username, message }) => {
+            if (this._notify) {
+                const notification = this.notify(`${username}: ${message}`);
+                adapter.on('visiblity', (focus) => {
+                    if (focus) {
+                        notification.close();
+                    }
+                });
             }
         });
 
@@ -584,6 +609,15 @@ class Dialogue {
                     } else {
                         const [provider] = args;
                         await adapter.auth(provider);
+                    }
+                    break;
+                case '/notify':
+                    if (Notification.permission === 'granted') {
+                        self._notify = true;
+                    } else {
+                        Notification.requestPermission().then((result) => {
+                            self._notify = result === 'granted';
+                        });
                     }
                     break;
                 case '/nick':
@@ -617,6 +651,10 @@ class Dialogue {
             }
         }
     }
+    notify(text) {
+        const img = './assets/favicon.svg';
+        return new Notification('Dialogue', { body: text, icon: img });
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -641,7 +679,7 @@ const firebase_config = {
         greetings: false
     });
 
-    const dialogue = new Dialogue({
+    const dialogue = window.dialogue = new Dialogue({
         adapter: new FirebaseAdapter(firebase_config),
         renderer: new Terminal(term),
         ready() {
