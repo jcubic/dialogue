@@ -674,7 +674,7 @@ async function random_joke() {
     const data = await res.json();
     if (data.type == 'twopart') {
         return [
-            `Q: ${data.setup}`
+            `Q: ${data.setup}`,
             `A: ${data.delivery}`
         ].join('\n');
     } else  if (data.type === 'single') {
