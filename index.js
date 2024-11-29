@@ -199,8 +199,8 @@ class FirebaseAdapter extends BaseAdapter {
         super();
         firebase.initializeApp(firebase_config);
         this._database = firebase.database();
-        this._messages = this._database.ref('messages');
-        this._users = this._database.ref('users');
+        this._messages = this._database.ref('dialogue/messages');
+        this._users = this._database.ref('dialogue/users');
         this._auth = firebase.auth();
         this._rooms = {};
         this._current_room;
@@ -208,7 +208,7 @@ class FirebaseAdapter extends BaseAdapter {
             if (user) {
                 this._login(user);
                 let username = user.displayName;
-                const ref = this._database.ref(`/users/${user.uid}`);
+                const ref = this._database.ref(`/dialogue/users/${user.uid}`);
                 ref.once('value').then(snapshot => {
                     const payload = { };
                     if (!snapshot.exists()) {

@@ -64,18 +64,22 @@ To protect the data in your firebase real time database you can use thes rules:
 ```json
 {
   "rules": {
-    "messages": {
+    "dialogue": {
       ".read": true,
-      ".write": "auth != null",
-      "$messageId": {
-        ".write": "auth != null && auth.uid === data.child('userId').val()"
-      }
-    },
-    "users": {
-      ".read": true,
-      ".write": "auth != null",
-"$userId": {
-        ".write": "auth != null && auth.uid === $userId"
+      "messages": {
+        ".write": "auth != null", // use false to disable creating rooms
+        "$roomName": {
+          ".write": "auth != null",
+          "$messageId": {
+            ".write": "auth != null && auth.uid === data.child('userId').val()"
+          }
+        }
+      },
+      "users": {
+        ".write": "auth != null",
+        "$userId": {
+          ".write": "auth != null && auth.uid === $userId"
+        }
       }
     },
     ".write": false,
