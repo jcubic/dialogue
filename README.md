@@ -85,17 +85,24 @@ To protect the data in your firebase real time database you can use thes rules:
 ```
 
 ## Todo
-- [ ] Notifications
-- [ ] Sound Notifications
+- [x] Notifications
+- [x] <del>Sound Notifications</del>
 - [ ] Online users per room
 - [ ] UI
   - [ ] React
-  - [ ] Terminal
+  - [ ] Vanilla Javascript Minimalistic [CodePen](https://codepen.io/jcubic/pen/xxzjQRd)
+  - [x] Terminal
     - [ ] chat command
 - [ ] Adapters
-  - [ ] Server-Sent Events
-  - [ ] Web Sockets
+  - [x] Firebase
+  - [ ] Server-Sent Events / PHP [jcubic/chat](https://github.com/jcubic/chat)
+  - [ ] Web Sockets / Node.js
+  - [ ] WebRTC [CodePen](https://codepen.io/jcubic/pen/xxzjQRd)
 - [ ] Add a way to obtain a commerial License
+- [ ] /help command connected to UI
+  - [ ] Terminal Using less
+  - [ ] Credits at the bottom of help
+  - [ ] Maybe written in Markdown
 
 ## License
 Copyright (c) 2024 [Jakub T. Jankiewicz](https://jakub.jankiewicz.org/)<br/>
