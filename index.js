@@ -640,9 +640,7 @@ class Dialogue {
                     break;
                 case '/help':
                     renderer.echo('Yet to be implemented');
-                case '/notify':
                     break;
-
                 default:
                     // implement bots fetch
 
