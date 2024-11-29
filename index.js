@@ -176,6 +176,9 @@ class BaseAdapter extends EventEmitter {
     uid() {
         return null;
     }
+    utc_now() {
+        return utc_now();
+    }
     logout() { }
     get_user() {
         return null;
@@ -666,6 +669,19 @@ const firebase_config = {
     appId: '1:39616195119:web:b872c371a915e3016574da'
 };
 
+async function random_joke() {
+    const res = await fetch('https://v2.jokeapi.dev/joke/Programming');
+    const data = await res.json();
+    if (data.type == 'twopart') {
+        return [
+            `Q: ${data.setup}`
+            `A: ${data.delivery}`
+        ].join('\n');
+    } else  if (data.type === 'single') {
+        return data.joke;
+    }
+}
+
 (function() {
     const term = $('body').terminal($.noop, {
         exceptionHandler(e) {
@@ -674,9 +690,22 @@ const firebase_config = {
         greetings: false
     });
 
+    const adapter = new FirebaseAdapter(firebase_config);
+    const renderer = new Terminal(term);
+
     const dialogue = window.dialogue = new Dialogue({
-        adapter: new FirebaseAdapter(firebase_config),
-        renderer: new Terminal(term),
+        adapter,
+        renderer,
+        async commands(command, args) {
+            if (command === '/joke') {
+                const joke = await random_joke();
+                if (joke) {
+                    adapter.send(adapter.get_user(), adapter.utc_now(), joke);
+                } else {
+                    renderer.echo('<red>Failed to get joke</red>');
+                }
+            }
+        },
         ready() {
             term.exec('/join general');
         }

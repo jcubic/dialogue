@@ -20,9 +20,37 @@ const firebase_config = {
     /* your firebase config */
 };
 
+const adapter = new FirebaseAdapter(firebase_config);
+const renderer = new Terminal(term);
+
+// example of using Joke API with Programming jokes
+async function random_joke() {
+    const res = await fetch('https://v2.jokeapi.dev/joke/Programming');
+    const data = await res.json();
+    if (data.type == 'twopart') {
+        return [
+            `Q: ${data.setup}`
+            `A: ${data.delivery}`
+        ].join('\n');
+    } else  if (data.type === 'single') {
+        return data.joke;
+    }
+}
+
 const dialogue = new Dialogue({
-    adapter: new FirebaseAdapter(firebase_config),
-    renderer: new Terminal(term),
+    adapter,
+    renderer,
+    commands(command, args) {
+        // custom system command
+        if (command === '/joke') {
+            const joke = await random_joke();
+            if (joke) {
+                adapter.send(adapter.get_user(), adapter.utc_now(), joke);
+            } else {
+                renderer.echo('<red>Failed to get joke</red>');
+            }
+        }
+    },
     ready: () => {
         term.exec('/join general');
     }
