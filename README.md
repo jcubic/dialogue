@@ -61,7 +61,7 @@ const dialogue = new Dialogue({
 
 To protect the data in your firebase real time database you can use thes rules:
 
-```
+```json
 {
   "rules": {
     "messages": {
@@ -84,7 +84,7 @@ To protect the data in your firebase real time database you can use thes rules:
 }
 ```
 
-## Todo
+## TODO
 - [x] Notifications
 - [x] <del>Sound Notifications</del>
 - [ ] Online users per room
@@ -100,7 +100,7 @@ To protect the data in your firebase real time database you can use thes rules:
   - [ ] WebRTC [CodePen](https://codepen.io/jcubic/pen/xxzjQRd)
 - [ ] Add a way to obtain a commerial License
 - [ ] /help command connected to UI
-  - [ ] Terminal Using less
+  - [ ] Terminal using less
   - [ ] Credits at the bottom of help
   - [ ] Maybe written in Markdown
 
