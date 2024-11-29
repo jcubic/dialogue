@@ -103,6 +103,9 @@ To protect the data in your firebase real time database you can use thes rules:
   - [ ] Terminal using less
   - [ ] Credits at the bottom of help
   - [ ] Maybe written in Markdown
+- [ ] website
+- [ ] js.org domain
+
 
 ## License
 Copyright (c) 2024 [Jakub T. Jankiewicz](https://jakub.jankiewicz.org/)<br/>
