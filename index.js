@@ -554,7 +554,7 @@ function in_focus() {
 
 class Dialogue {
     static version = '0.1.0';
-    constructor({ adapter, renderer, ready, ...args }) {
+    constructor({ adapter, renderer, ready, commands = () => {}, ...args }) {
         if (!(adapter instanceof BaseAdapter)) {
             renderer.error(new Error('Adapter needs to be instance of BaseAdapter'));
             return;
@@ -642,10 +642,7 @@ class Dialogue {
                     renderer.echo('Yet to be implemented');
                     break;
                 default:
-                    // implement bots fetch
-
-                    // server needs to return name of the bot
-                    // { result: { message, name } }
+                    commands(command, args);
             }
         }
     }
