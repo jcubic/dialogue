@@ -86,6 +86,7 @@ To protect the data in your firebase real time database you can use thes rules:
 
 ## TODO
 - [x] Notifications
+- [x] <del>Push Notifications</del>
 - [x] <del>Sound Notifications</del>
 - [ ] Online users per room
 - [ ] UI
