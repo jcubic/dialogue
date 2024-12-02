@@ -138,7 +138,6 @@ class BaseAdapter extends EventEmitter {
         this._focus = true;
         this._now = Date.now();
         this.on('message', (message) => {
-            console.log({ new: this.is_new_message(message) });
             if (this.is_new_message(message)) {
                 this._unread_messages++;
                 this.emit('messages-count', this._unread_messages);
@@ -315,7 +314,7 @@ class FirebaseAdapter extends BaseAdapter {
     }
     quit(room = null) {
         if (room === null) {
-            for (const ref of this._rooms) {
+            for (const ref of Object.values(this._rooms)) {
                 ref.off();
             }
             this._rooms = {};
@@ -386,16 +385,15 @@ class BaseRenderer {
 }
 
 class Terminal extends BaseRenderer {
-    constructor(terminal) {
+    constructor(terminal, options = {}) {
         super();
+        this._options = options;
         this._term = terminal;
     }
     async init({ adapter, system: system_command, greetings, prompt: user_prompt } = {}) {
         this._adapter = adapter;
         this._term.pause();
         const term = this._term;
-
-        this._view = term.export_view();
 
         const formatter = new Intl.ListFormat('en', {
             style: 'long',
@@ -447,7 +445,6 @@ class Terminal extends BaseRenderer {
                 return $.terminal.figlet.load([font]).then(render_greetings);
             }
         };
-        await this._greetings();
         function send_message(message) {
             const username = adapter.get_user();
             if (username) {
@@ -458,7 +455,8 @@ class Terminal extends BaseRenderer {
             }
         }
         const commands = ['/figlet', '/image'];
-        term.set_interpreter(function(command) {
+
+        function intepreter(command) {
             const echo_command = this.option('echoCommand');
             this.option('echoCommand', false);
             if (is_system_command(command)) {
@@ -471,16 +469,36 @@ class Terminal extends BaseRenderer {
                 } else {
                     return system_command(name, args);
                 }
-            } else {
+            } else if (command) {
                 send_message(command);
             }
-        });
-        term.set_prompt(prompt);
+        }
+        if (this._options.command) {
+            const view = term.export_view();
+            term.push(intepreter, {
+                name: 'dialogue',
+                prompt,
+                onExit: () => {
+                    term.import_view(view);
+                    this.stop();
+                }
+            });
+            term.clear();
+        } else {
+            term.set_interpreter(intepreter);
+            term.set_prompt(prompt);
+        }
+        await this._greetings();
         term.resume();
-        term.on('click', '.room', function () {
+        term.off('click', '.room').on('click', '.room', function () {
             const room = $(this).text();
             term.exec(`/join ${room}`);
         });
+    }
+    stop() {
+        this._adapter.off('nick');
+        this._adapter.off('auth');
+        this._adapter.quit();
     }
     async join(room) {
         this.log(`Welcome to ${room} room`);
@@ -567,8 +585,6 @@ class Dialogue {
             return;
         }
 
-        const self = this;
-
         function render_message(username, datetime, message) {
             renderer.render({ username, datetime, message });
         }
@@ -602,9 +618,12 @@ class Dialogue {
 
         let room;
 
-        unpromise(renderer.init({ adapter, system, ...args }), ready);
+        const self = this;
+        this._adapter = adapter;
+        this._renderer = renderer;
+        this._ready = ready;
 
-        async function system(command, args) {
+        this._system = async function system(command, args) {
             switch(command) {
                 case '/login':
                     if (args.length === 0) {
@@ -647,7 +666,12 @@ class Dialogue {
                 default:
                     commands(command, args);
             }
-        }
+        };
+    }
+    async start(args = {}) {
+        const system = this._system;
+        const adapter = this._adapter;
+        await this._renderer.init({ adapter, system, ...args });
     }
     notify(text) {
         const img = './assets/favicon.svg';
@@ -683,7 +707,12 @@ async function random_joke() {
 }
 
 (function() {
-    const term = $('body').terminal($.noop, {
+    const term = $('body').terminal({
+        async chat() {
+            await dialogue.start();
+            this.exec('/join general');
+        }
+    }, {
         exceptionHandler(e) {
             this.error(`Error: ${e.message}`);
         },
@@ -691,9 +720,9 @@ async function random_joke() {
     });
 
     const adapter = new FirebaseAdapter(firebase_config);
-    const renderer = new Terminal(term);
+    const renderer = new Terminal(term, { command: true });
 
-    const dialogue = window.dialogue = new Dialogue({
+    const dialogue =  new Dialogue({
         adapter,
         renderer,
         async commands(command, args) {
@@ -702,12 +731,9 @@ async function random_joke() {
                 if (joke) {
                     adapter.send(adapter.get_user(), adapter.utc_now(), joke);
                 } else {
-                    renderer.echo('<red>Failed to get joke</red>');
+                    renderer.echo('<red>Failed to get a joke</red>');
                 }
             }
-        },
-        ready() {
-            term.exec('/join general');
         }
     });
 })();

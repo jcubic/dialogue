@@ -97,7 +97,7 @@ To protect the data in your firebase real time database you can use thes rules:
   - [ ] React
   - [ ] Vanilla Javascript Minimalistic [CodePen](https://codepen.io/jcubic/pen/xxzjQRd)
   - [x] Terminal
-    - [ ] chat command
+    - [x] chat command
 - [ ] Adapters
   - [x] Firebase
   - [ ] Server-Sent Events / PHP [jcubic/chat](https://github.com/jcubic/chat)
