@@ -46,5 +46,5 @@ async function random_joke() {
         }
     });
     await dialogue.start();
-    this.exec('/join general');
+    term.exec('/join general');
 })();
