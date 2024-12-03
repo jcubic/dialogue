@@ -403,7 +403,7 @@ class Terminal extends BaseRenderer {
             this.log(`You're now known as ${username}`);
         });
 
-        async function rooms() {
+        async function get_rooms() {
             const rooms = await adapter.rooms();
             const formatted = rooms.map(room => `<white class="room">${room}</white>`);
             return formatter.format(formatted);
@@ -422,11 +422,23 @@ class Terminal extends BaseRenderer {
         const font = 'ANSI Shadow';
 
         function render_greetings() {
-            term.echo($.terminal.figlet(font, 'dialogue', { color }), {
-                ansi: true
+            // Hack to wait for the async echo function to finish, it fixes duplicated async echo
+            // see https://github.com/jcubic/jquery.terminal/issues/987
+            return new Promise(resolve => {
+                term.echo($.terminal.figlet(font, 'dialogue', { color }), {
+                    ansi: true
+                });
+                term.echo(`[[b;#4889F1;]Web-Terminal Chat v.${Dialogue.version}]\n`);
+                let resolved = false;
+                term.echo(async () => {
+                    const ret = `Available rooms: ${await get_rooms()}`;
+                    if (!resolved) {
+                        resolved = true;
+                        setTimeout(resolve, 0);
+                    }
+                    return ret;
+                });
             });
-            term.echo(`[[b;#4889F1;]Web-Terminal Chat v.${Dialogue.version}]\n`);
-            term.echo(async () => `Available rooms: ${await rooms()}`);
         }
 
         this._greetings = () => {
@@ -478,7 +490,7 @@ class Terminal extends BaseRenderer {
                 prompt,
                 onExit: () => {
                     term.import_view(view);
-                    this.stop();
+                    this.quit();
                 }
             });
             term.clear();
@@ -501,11 +513,6 @@ class Terminal extends BaseRenderer {
     leave(room) {
         this._adapter.quit(room);
     }
-    stop() {
-        this._adapter.off('nick');
-        this._adapter.off('auth');
-        this._adapter.quit();
-    }
     async join(room) {
         if (this._current_room) {
             this.leave(this._current_room);
@@ -521,7 +528,11 @@ class Terminal extends BaseRenderer {
     echo(message) {
         this._term.echo(message);
     }
-    quit() { }
+    quit() {
+        this._adapter.off('nick');
+        this._adapter.off('auth');
+        this._adapter.quit();
+    }
     render({ username, datetime, message }) {
         function format(message) {
             const time = format_time(new Date(datetime));
