@@ -158,7 +158,6 @@ class BaseAdapter extends EventEmitter {
         if (this._now > message.datetime) {
             return false;
         }
-        console.log({ rnd: message.rnd, random_id: this.random_id(), focus: in_focus() });
         return message.rnd !== this.random_id() && !in_focus();
     }
     clear_unread() {
@@ -200,11 +199,14 @@ class FirebaseAdapter extends BaseAdapter {
         super();
         firebase.initializeApp(firebase_config);
         this._database = firebase.database();
+        // TODO: make room higher level
+        //       dialogue/<room>/messages
+        //       dialogue/<room>/users
         this._messages = this._database.ref('dialogue/messages');
         this._users = this._database.ref('dialogue/users');
         this._auth = firebase.auth();
         this._rooms = {};
-        this._current_room;
+        this._current_room = null;
         this._logout = this._auth.onAuthStateChanged(user => {
             if (user) {
                 this._login(user);
@@ -314,17 +316,6 @@ class FirebaseAdapter extends BaseAdapter {
             }
         }
     }
-    quit(room = null) {
-        if (room === null) {
-            for (const ref of Object.values(this._rooms)) {
-                ref.off();
-            }
-            this._rooms = {};
-        } else {
-            this._rooms[room].off();
-            delete this._rooms[room];
-        }
-    }
     rooms() {
         return this._messages.once('value').then((snapshot) => {
             const keys = [];
@@ -334,22 +325,28 @@ class FirebaseAdapter extends BaseAdapter {
             return keys;
         });
     }
+    quit(room = null) {
+        if (room === null) {
+            for (const ref of Object.values(this._rooms)) {
+                ref.off();
+            }
+            this._rooms = {};
+        } else if (room in this._rooms) {
+            this._rooms[room].off();
+            delete this._rooms[room];
+        }
+    }
     join(room) {
         this._rooms[room] = this._messages.child(room);
         this._current_room = this._rooms[room];
         this._rooms[room].limitToLast(100).on('child_added', (snapshot) => {
-            const data = snapshot.val();
-            const { message, username, datetime, rnd } = data;
-            if (this._render) {
-                const date = new Date(datetime);
-                this.emit('message', {
-                    username,
-                    datetime,
-                    message,
-                    rnd
-                });
-                this._render(username, date, message);
-            }
+            const { message, username, datetime, rnd } = snapshot.val();
+            this.emit('message', {
+                username,
+                datetime,
+                message,
+                rnd
+            });
         });
         return () => {
             this._rooms[room].off();
@@ -365,13 +362,10 @@ class FirebaseAdapter extends BaseAdapter {
         };
         this._current_room.push(payload);
     }
-    set({ render }) {
-        this._render = render;
-    }
 }
 
 class BaseRenderer {
-    init(adapter) { }
+    constructor(adapter) { }
     on_join(room) { }
     on_quit() { }
     render({ username, datetime, message }) {
@@ -447,6 +441,7 @@ class Terminal extends BaseRenderer {
                 return $.terminal.figlet.load([font]).then(render_greetings);
             }
         };
+
         function send_message(message) {
             const username = adapter.get_user();
             if (username) {
@@ -476,7 +471,8 @@ class Terminal extends BaseRenderer {
             }
         }
         if (this._options.command) {
-            const view = term.export_view();
+            // view with previous state of the terminal
+            const view = this._term.export_view();
             term.push(intepreter, {
                 name: 'dialogue',
                 prompt,
@@ -491,11 +487,19 @@ class Terminal extends BaseRenderer {
             term.set_prompt(prompt);
         }
         await this._greetings();
+        this._adapter.on('message', (message) => {
+            this.render(message);
+        });
         term.resume();
+        // view after Dialogue is initialized
+        this._view = term.export_view();
         term.off('click', '.room').on('click', '.room', function () {
             const room = $(this).text();
             term.exec(`/join ${room}`);
         });
+    }
+    leave(room) {
+        this._adapter.quit(room);
     }
     stop() {
         this._adapter.off('nick');
@@ -503,6 +507,11 @@ class Terminal extends BaseRenderer {
         this._adapter.quit();
     }
     async join(room) {
+        if (this._current_room) {
+            this.leave(this._current_room);
+        }
+        this._current_room = room;
+        this._term.import_view(this._view);
         this.log(`Welcome to ${room} room`);
         const users = await this._users();
         if (users) {
@@ -515,7 +524,7 @@ class Terminal extends BaseRenderer {
     quit() { }
     render({ username, datetime, message }) {
         function format(message) {
-            const time = format_time(datetime);
+            const time = format_time(new Date(datetime));
             const prefix = `[${time}]<${color(username)}> `;
             message = message.replace(/```(.*)\n([\s\S]+)```/g, function(_, language, code) {
                 return $.terminal.prism(language, code);
@@ -616,9 +625,9 @@ class Dialogue {
             }
         });
 
-        adapter.set({ render: render_message });
+        //adapter.set({ render: render_message });
 
-        let room;
+        const rooms = [];
 
         const self = this;
         this._adapter = adapter;
@@ -649,17 +658,20 @@ class Dialogue {
                     return adapter.set_nick(nick);
                     break;
                 case '/join':
-                    [room] = args;
+                    const [room] = args;
                     if (room) {
-                        await adapter.join(room);
                         await renderer.join(room);
+                        await adapter.join(room);
+                        rooms.push(room);
                     }
                     break;
                 case '/quit':
-                    if (room) {
-                        await renderer.quit(room);
-                        await adapter.quit(room);
-                        room = null;
+                    if (rooms.length) {
+                        for (const room of rooms) {
+                            await renderer.quit(room);
+                            await adapter.quit(room);
+                        }
+                        rooms = [];
                     }
                     break;
                 case '/help':
