@@ -597,7 +597,9 @@
       }
     }
     log(message) {
-      this.echo(`[[i;#A528B9;]${message}]`);
+      const time = format_time(/* @__PURE__ */ new Date());
+      const prefix = $.terminal.escape_brackets(`[${time}]`);
+      this.echo(`[[i;#A528B9;]${prefix} ${message}]`);
     }
   };
   var Terminal_default = Terminal;

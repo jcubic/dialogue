@@ -279,7 +279,9 @@ class Terminal extends BaseRenderer {
         }
     }
     log(message) {
-        this.echo(`[[i;#A528B9;]${message}]`);
+        const time = format_time(new Date());
+        const prefix = $.terminal.escape_brackets(`[${time}]`);
+        this.echo(`[[i;#A528B9;]${prefix} ${message}]`);
     }
 }
 
