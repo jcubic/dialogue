@@ -171,8 +171,8 @@ class Terminal extends BaseRenderer {
                 name: 'dialogue',
                 prompt,
                 onExit: () => {
-                    term.import_view(view);
                     this.quit();
+                    term.import_view(view);
                 }
             });
             term.clear();
@@ -181,9 +181,10 @@ class Terminal extends BaseRenderer {
             term.set_prompt(prompt);
         }
         await this._greetings();
-        this._adapter.on('message', (message) => {
+        this._message_handler = (message) => {
             this.render(message);
-        });
+        };
+        this._adapter.on('message', this._message_handler);
         term.resume();
         // view after Dialogue is initialized
         this._view = term.export_view();
@@ -214,11 +215,20 @@ class Terminal extends BaseRenderer {
         this._adapter.off('nick');
         this._adapter.off('auth');
         this._adapter.quit();
+        this._adapter.off('message', this._message_handler);
     }
     render({ username, datetime, message }) {
+        const get_prefix = () => {
+            let result = [];
+            if (this._options.show_date) {
+                const time = format_time(new Date(datetime));
+                result.push(`[${time}]`);
+            }
+            result.push(`<${color(username)}> `);
+            return result.join('');
+        };
         function format(message) {
-            const time = format_time(new Date(datetime));
-            const prefix = `[${time}]<${color(username)}> `;
+            const prefix = get_prefix();
             message = message.replace(/```(.*)\n([\s\S]+)```/g, function(_, language, code) {
                 return $.terminal.prism(language, code);
             });

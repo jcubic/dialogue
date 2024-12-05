@@ -55,10 +55,6 @@ class BaseAdapter extends EventEmitter {
     }
     async set_nick(username) { }
     async auth(provider_name) { }
-    quit() {
-        document.removeEventListener("visibilitychange", this._visibility_handler);
-        this.off('message');
-    }
     async rooms() {
         return [];
     }

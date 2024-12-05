@@ -4,7 +4,7 @@ import BaseRenderer from './renderers/Base';
 
 class Dialogue {
     static version = package_version;
-    constructor({ adapter, renderer, ready, commands = () => {}, ...args }) {
+    constructor({ adapter, renderer, commands = () => {}, ...args }) {
         if (!(adapter instanceof BaseAdapter)) {
             renderer.error(new Error('Adapter needs to be instance of BaseAdapter'));
             return;
@@ -43,14 +43,11 @@ class Dialogue {
             }
         });
 
-        //adapter.set({ render: render_message });
-
         const rooms = [];
 
         const self = this;
         this._adapter = adapter;
         this._renderer = renderer;
-        this._ready = ready;
 
         this._system = async function system(command, args) {
             switch(command) {

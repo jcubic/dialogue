@@ -140,14 +140,9 @@ class FirebaseAdapter extends BaseAdapter {
                 ref.off();
             }
             this._rooms = {};
-            super.quit();
         } else if (room in this._rooms) {
             this._rooms[room].off();
             delete this._rooms[room];
-            const rooms = Object.keys(this._rooms);
-            if (!rooms.lenght) {
-                super.quit();
-            }
         }
     }
     join(room) {

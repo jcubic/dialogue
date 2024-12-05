@@ -125,10 +125,6 @@
     }
     async auth(provider_name) {
     }
-    quit() {
-      document.removeEventListener("visibilitychange", this._visibility_handler);
-      this.off("message");
-    }
     async rooms() {
       return [];
     }
@@ -273,14 +269,9 @@
           ref.off();
         }
         this._rooms = {};
-        super.quit();
       } else if (room in this._rooms) {
         this._rooms[room].off();
         delete this._rooms[room];
-        const rooms = Object.keys(this._rooms);
-        if (!rooms.lenght) {
-          super.quit();
-        }
       }
     }
     join(room) {
@@ -342,7 +333,7 @@
     dependencies: {},
     devDependencies: {},
     scripts: {
-      build: "esbuild ./examples/terminal_app.js  --bundle --outfile=index.js"
+      build: "esbuild ./examples/terminal_command.js  --bundle --outfile=index.js"
     },
     keywords: [],
     author: "Jakub T. Jankiewicz <jcubic@onet.pl> (https://jcubic.pl/me/)",
@@ -499,8 +490,8 @@
           name: "dialogue",
           prompt,
           onExit: () => {
-            term.import_view(view);
             this.quit();
+            term.import_view(view);
           }
         });
         term.clear();
@@ -509,9 +500,10 @@
         term.set_prompt(prompt);
       }
       await this._greetings();
-      this._adapter.on("message", (message) => {
+      this._message_handler = (message) => {
         this.render(message);
-      });
+      };
+      this._adapter.on("message", this._message_handler);
       term.resume();
       this._view = term.export_view();
       term.off("click", ".room").on("click", ".room", function() {
@@ -541,11 +533,20 @@
       this._adapter.off("nick");
       this._adapter.off("auth");
       this._adapter.quit();
+      this._adapter.off("message", this._message_handler);
     }
     render({ username, datetime, message }) {
+      const get_prefix = () => {
+        let result = [];
+        if (this._options.show_date) {
+          const time = format_time(new Date(datetime));
+          result.push(`[${time}]`);
+        }
+        result.push(`<${color(username)}> `);
+        return result.join("");
+      };
       function format(message2) {
-        const time = format_time(new Date(datetime));
-        const prefix = `[${time}]<${color(username)}> `;
+        const prefix = get_prefix();
         message2 = message2.replace(/```(.*)\n([\s\S]+)```/g, function(_, language, code) {
           return $.terminal.prism(language, code);
         });
@@ -604,7 +605,7 @@
   // src/Dialogue.js
   var Dialogue = class {
     static version = version_default;
-    constructor({ adapter, renderer, ready, commands = () => {
+    constructor({ adapter, renderer, commands = () => {
     }, ...args }) {
       if (!(adapter instanceof Base_default)) {
         renderer.error(new Error("Adapter needs to be instance of BaseAdapter"));
@@ -642,7 +643,6 @@
       const self = this;
       this._adapter = adapter;
       this._renderer = renderer;
-      this._ready = ready;
       this._system = async function system(command, args2) {
         switch (command) {
           case "/login":
@@ -729,16 +729,21 @@
   };
   var firebase_default = firebase_config;
 
-  // examples/terminal_app.js
+  // examples/terminal_command.js
   (async function() {
-    const term = $("body").terminal($.noop, {
+    const term = $("body").terminal({
+      async chat() {
+        await dialogue.start();
+        term.exec("/join general");
+      }
+    }, {
       exceptionHandler(e) {
         this.error(`Error: ${e.message}`);
       },
       greetings: false
     });
     const adapter = new Firebase_default(firebase_default);
-    const renderer = new Terminal_default(term);
+    const renderer = new Terminal_default(term, { command: true });
     const dialogue = new Dialogue_default({
       adapter,
       renderer,
@@ -753,7 +758,5 @@
         }
       }
     });
-    await dialogue.start();
-    term.exec("/join general");
   })();
 })();
