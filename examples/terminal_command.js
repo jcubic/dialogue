@@ -1,28 +1,8 @@
-import FirebaseAdapter from './adapters/Firebase';
-import Terminal from './renderers/Terminal';
-import Dialogue from './Dialogue';
-
-const firebase_config = {
-    apiKey: 'AIzaSyA5zqBzylFJKfyahh0AStlss5mosqk75jw',
-    authDomain: 'dialogue-bddd4.firebaseapp.com',
-    projectId: 'dialogue-bddd4',
-    storageBucket: 'dialogue-bddd4.appspot.com',
-    messagingSenderId: '39616195119',
-    appId: '1:39616195119:web:b872c371a915e3016574da'
-};
-
-async function random_joke() {
-    const res = await fetch('https://v2.jokeapi.dev/joke/Programming');
-    const data = await res.json();
-    if (data.type == 'twopart') {
-        return [
-            `Q: ${data.setup}`,
-            `A: ${data.delivery}`
-        ].join('\n');
-    } else  if (data.type === 'single') {
-        return data.joke;
-    }
-}
+import FirebaseAdapter from '../src/adapters/Firebase';
+import Terminal from '../src/renderers/Terminal';
+import Dialogue from '../src/Dialogue';
+import random_joke from './joke';
+import firebase_config from './firebase';
 
 (async function() {
     const term = $('body').terminal({

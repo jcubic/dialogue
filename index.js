@@ -342,7 +342,7 @@
     dependencies: {},
     devDependencies: {},
     scripts: {
-      build: "esbuild ./src/demo.js  --bundle --outfile=index.js"
+      build: "esbuild ./examples/terminal_app.js  --bundle --outfile=index.js"
     },
     keywords: [],
     author: "Jakub T. Jankiewicz <jcubic@onet.pl> (https://jcubic.pl/me/)",
@@ -703,15 +703,7 @@
   };
   var Dialogue_default = Dialogue;
 
-  // src/demo.js
-  var firebase_config = {
-    apiKey: "AIzaSyA5zqBzylFJKfyahh0AStlss5mosqk75jw",
-    authDomain: "dialogue-bddd4.firebaseapp.com",
-    projectId: "dialogue-bddd4",
-    storageBucket: "dialogue-bddd4.appspot.com",
-    messagingSenderId: "39616195119",
-    appId: "1:39616195119:web:b872c371a915e3016574da"
-  };
+  // examples/joke.js
   async function random_joke() {
     const res = await fetch("https://v2.jokeapi.dev/joke/Programming");
     const data = await res.json();
@@ -724,26 +716,35 @@
       return data.joke;
     }
   }
+  var joke_default = random_joke;
+
+  // examples/firebase.js
+  var firebase_config = {
+    apiKey: "AIzaSyA5zqBzylFJKfyahh0AStlss5mosqk75jw",
+    authDomain: "dialogue-bddd4.firebaseapp.com",
+    projectId: "dialogue-bddd4",
+    storageBucket: "dialogue-bddd4.appspot.com",
+    messagingSenderId: "39616195119",
+    appId: "1:39616195119:web:b872c371a915e3016574da"
+  };
+  var firebase_default = firebase_config;
+
+  // examples/terminal_app.js
   (async function() {
-    const term = $("body").terminal({
-      async chat() {
-        await dialogue.start();
-        term.exec("/join general");
-      }
-    }, {
+    const term = $("body").terminal($.noop, {
       exceptionHandler(e) {
         this.error(`Error: ${e.message}`);
       },
       greetings: false
     });
-    const adapter = new Firebase_default(firebase_config);
-    const renderer = new Terminal_default(term, { command: true });
+    const adapter = new Firebase_default(firebase_default);
+    const renderer = new Terminal_default(term);
     const dialogue = new Dialogue_default({
       adapter,
       renderer,
       async commands(command, args) {
         if (command === "/joke") {
-          const joke = await random_joke();
+          const joke = await joke_default();
           if (joke) {
             adapter.send(adapter.get_user(), adapter.utc_now(), joke);
           } else {
@@ -752,5 +753,7 @@
         }
       }
     });
+    await dialogue.start();
+    term.exec("/join general");
   })();
 })();
