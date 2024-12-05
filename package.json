@@ -1,0 +1,15 @@
+{
+  "name": "@jcubic/dialogue",
+  "version": "0.1.0",
+  "description": "Chat JavaScript Open Source library",
+  "main": "index.js",
+  "dependencies": {
+  },
+  "devDependencies": {},
+  "scripts": {
+     "build": "esbuild ./src/demo.js  --bundle --outfile=index.js"
+  },
+  "keywords": [],
+  "author": "Jakub T. Jankiewicz <jcubic@onet.pl> (https://jcubic.pl/me/)",
+  "license": "AGPL-3.0-or-later"
+}

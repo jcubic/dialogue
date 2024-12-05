@@ -1,3 +1,7 @@
+import FirebaseAdapter from './adapters/Firebase';
+import Terminal from './renderers/Terminal';
+import Dialogue from './Dialogue';
+
 const firebase_config = {
     apiKey: 'AIzaSyA5zqBzylFJKfyahh0AStlss5mosqk75jw',
     authDomain: 'dialogue-bddd4.firebaseapp.com',
@@ -21,7 +25,12 @@ async function random_joke() {
 }
 
 (async function() {
-    const term = $('body').terminal($.noop, {
+    const term = $('body').terminal({
+        async chat() {
+            await dialogue.start();
+            term.exec('/join general');
+        }
+    }, {
         exceptionHandler(e) {
             this.error(`Error: ${e.message}`);
         },
@@ -29,7 +38,7 @@ async function random_joke() {
     });
 
     const adapter = new FirebaseAdapter(firebase_config);
-    const renderer = new Terminal(term);
+    const renderer = new Terminal(term, { command: true });
 
     const dialogue =  new Dialogue({
         adapter,
@@ -45,6 +54,4 @@ async function random_joke() {
             }
         }
     });
-    await dialogue.start();
-    term.exec('/join general');
 })();
