@@ -7,7 +7,7 @@
   },
   "devDependencies": {},
   "scripts": {
-     "build": "esbuild ./examples/terminal_app.js  --bundle --outfile=index.js"
+     "build": "esbuild ./examples/terminal_app.js --outfile=index.js --bundle"
   },
   "keywords": [],
   "author": "Jakub T. Jankiewicz <jcubic@onet.pl> (https://jcubic.pl/me/)",

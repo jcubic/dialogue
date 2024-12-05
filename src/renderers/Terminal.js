@@ -103,6 +103,7 @@ class Terminal extends BaseRenderer {
         const color = '#D58315';
         const font = 'ANSI Shadow';
 
+        let first_greeting = true;
         function render_greetings() {
             // Hack to wait for the async echo function to finish, it fixes duplicated async echo
             // see https://github.com/jcubic/jquery.terminal/issues/987
@@ -111,11 +112,10 @@ class Terminal extends BaseRenderer {
                     ansi: true
                 });
                 term.echo(`[[b;#4889F1;]Web-Terminal Chat v.${version}]\n`);
-                let resolved = false;
                 term.echo(async () => {
                     const ret = `Available rooms: ${await get_rooms()}`;
-                    if (!resolved) {
-                        resolved = true;
+                    if (first_greeting) {
+                        first_greeting = false;
                         setTimeout(resolve, 0);
                     }
                     return ret;
@@ -199,9 +199,9 @@ class Terminal extends BaseRenderer {
     async join(room) {
         if (this._current_room) {
             this.leave(this._current_room);
+            this._term.import_view(this._view);
         }
         this._current_room = room;
-        this._term.import_view(this._view);
         this.log(`Welcome to ${room} room`);
         const users = await this._users();
         if (users) {

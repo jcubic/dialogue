@@ -333,7 +333,7 @@
     dependencies: {},
     devDependencies: {},
     scripts: {
-      build: "esbuild ./examples/terminal_command.js  --bundle --outfile=index.js"
+      build: "esbuild ./examples/terminal_app.js --outfile=index.js --bundle"
     },
     keywords: [],
     author: "Jakub T. Jankiewicz <jcubic@onet.pl> (https://jcubic.pl/me/)",
@@ -428,6 +428,7 @@
       const prompt = user_prompt ?? "[[;#3AB4DB;]dialogue]> ";
       const color2 = "#D58315";
       const font = "ANSI Shadow";
+      let first_greeting = true;
       function render_greetings() {
         return new Promise((resolve) => {
           term.echo($.terminal.figlet(font, "dialogue", { color: color2 }), {
@@ -435,11 +436,10 @@
           });
           term.echo(`[[b;#4889F1;]Web-Terminal Chat v.${version_default}]
 `);
-          let resolved = false;
           term.echo(async () => {
             const ret = `Available rooms: ${await get_rooms()}`;
-            if (!resolved) {
-              resolved = true;
+            if (first_greeting) {
+              first_greeting = false;
               setTimeout(resolve, 0);
             }
             return ret;
@@ -517,9 +517,9 @@
     async join(room) {
       if (this._current_room) {
         this.leave(this._current_room);
+        this._term.import_view(this._view);
       }
       this._current_room = room;
-      this._term.import_view(this._view);
       this.log(`Welcome to ${room} room`);
       const users = await this._users();
       if (users) {
@@ -729,21 +729,16 @@
   };
   var firebase_default = firebase_config;
 
-  // examples/terminal_command.js
+  // examples/terminal_app.js
   (async function() {
-    const term = $("body").terminal({
-      async chat() {
-        await dialogue.start();
-        term.exec("/join general");
-      }
-    }, {
+    const term = $("body").terminal($.noop, {
       exceptionHandler(e) {
         this.error(`Error: ${e.message}`);
       },
       greetings: false
     });
     const adapter = new Firebase_default(firebase_default);
-    const renderer = new Terminal_default(term, { command: true });
+    const renderer = new Terminal_default(term);
     const dialogue = new Dialogue_default({
       adapter,
       renderer,
@@ -758,5 +753,7 @@
         }
       }
     });
+    await dialogue.start();
+    term.exec("/join general");
   })();
 })();

@@ -1,6 +1,7 @@
 import package_version from './version';
 import BaseAdapter from './adapters/Base';
 import BaseRenderer from './renderers/Base';
+import { delay } from './utils';
 
 class Dialogue {
     static version = package_version;
