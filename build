@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# bash Script generated with ChatGPT
+
+MODE="build"
+NAME="app"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --watch)
+      MODE="watch"
+      shift
+      ;;
+    --name)
+      NAME="$2"
+      shift 2
+      ;;
+    *)
+      echo "Usage: $0 [--watch] [--name <name>]"
+      exit 1
+      ;;
+  esac
+done
+
+INPUT_FILE="./examples/terminal_${NAME}.js"
+OUTPUT_FILE="index.js"
+
+if [[ ! -f "$INPUT_FILE" ]]; then
+  echo "Error: File '$INPUT_FILE' does not exist."
+  exit 1
+fi
+
+if [[ "$MODE" == "watch" ]]; then
+  npx esbuild "$INPUT_FILE" --outfile="$OUTPUT_FILE" --bundle --watch
+else
+  npx esbuild "$INPUT_FILE" --outfile="$OUTPUT_FILE" --bundle
+fi
