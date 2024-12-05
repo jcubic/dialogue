@@ -27,6 +27,9 @@
   function random_string(count = 10) {
     return Math.random().toString(36).substr(2, 2 + count);
   }
+  function in_focus() {
+    return document.visibilityState === "visible";
+  }
   function is_system_command(command) {
     return command.match(/^\s*\/[^\s]+/);
   }
@@ -79,13 +82,14 @@
           this.emit("new-message", message);
         }
       });
-      document.addEventListener("visibilitychange", () => {
+      this._visibility_handler = () => {
         this._focus = in_focus();
         this.emit("visiblity", this._focus);
         if (!this._focus) {
           this.clear_unread();
         }
-      });
+      };
+      document.addEventListener("visibilitychange", this._visibility_handler);
     }
     is_new_message(message) {
       if (this._now > message.datetime) {
@@ -121,7 +125,9 @@
     }
     async auth(provider_name) {
     }
-    quit(room) {
+    quit() {
+      document.removeEventListener("visibilitychange", this._visibility_handler);
+      this.off("message");
     }
     async rooms() {
       return [];
@@ -267,9 +273,14 @@
           ref.off();
         }
         this._rooms = {};
+        super.quit();
       } else if (room in this._rooms) {
         this._rooms[room].off();
         delete this._rooms[room];
+        const rooms = Object.keys(this._rooms);
+        if (!rooms.lenght) {
+          super.quit();
+        }
       }
     }
     join(room) {

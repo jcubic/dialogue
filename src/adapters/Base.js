@@ -1,4 +1,4 @@
-import { random_string } from '../utils';
+import { random_string, in_focus } from '../utils';
 import EventEmitter from '../EventEmitter';
 
 class BaseAdapter extends EventEmitter {
@@ -15,13 +15,14 @@ class BaseAdapter extends EventEmitter {
                 this.emit('new-message', message);
             }
         });
-        document.addEventListener("visibilitychange", () => {
+        this._visibility_handler = () => {
             this._focus = in_focus();
             this.emit('visiblity', this._focus);
             if (!this._focus) {
                 this.clear_unread();
             }
-        });
+        };
+        document.addEventListener("visibilitychange", this._visibility_handler);
     }
     is_new_message(message) {
         if (this._now > message.datetime) {
@@ -54,7 +55,10 @@ class BaseAdapter extends EventEmitter {
     }
     async set_nick(username) { }
     async auth(provider_name) { }
-    quit(room) { }
+    quit() {
+        document.removeEventListener("visibilitychange", this._visibility_handler);
+        this.off('message');
+    }
     async rooms() {
         return [];
     }
