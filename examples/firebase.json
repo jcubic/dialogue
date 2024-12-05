@@ -1,0 +1,25 @@
+// This is example Firebase Rules to protect your realtime database
+{
+  "rules": {
+    "dialogue": {
+      ".read": true,
+      "messages": {
+        ".write": "auth != null", // use false to disable creating rooms
+        "$roomName": {
+          ".write": "auth != null",
+          "$messageId": {
+            ".write": "auth != null && auth.uid === data.child('userId').val()"
+          }
+        }
+      },
+      "users": {
+        ".write": "auth != null",
+        "$userId": {
+          ".write": "auth != null && auth.uid === $userId"
+        }
+      }
+    },
+    ".write": false,
+    ".read": false
+  }
+}
