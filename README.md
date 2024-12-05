@@ -29,7 +29,7 @@ async function random_joke() {
     const data = await res.json();
     if (data.type == 'twopart') {
         return [
-            `Q: ${data.setup}`
+            `Q: ${data.setup}`,
             `A: ${data.delivery}`
         ].join('\n');
     } else  if (data.type === 'single') {
@@ -50,42 +50,10 @@ const dialogue = new Dialogue({
                 renderer.echo('<red>Failed to get joke</red>');
             }
         }
-    },
-    ready: () => {
-        term.exec('/join general');
     }
 });
-```
-
-## Firebase rules
-
-To protect the data in your firebase real time database you can use thes rules:
-
-```json
-{
-  "rules": {
-    "dialogue": {
-      ".read": true,
-      "messages": {
-        ".write": "auth != null", // use false to disable creating rooms
-        "$roomName": {
-          ".write": "auth != null",
-          "$messageId": {
-            ".write": "auth != null && auth.uid === data.child('userId').val()"
-          }
-        }
-      },
-      "users": {
-        ".write": "auth != null",
-        "$userId": {
-          ".write": "auth != null && auth.uid === $userId"
-        }
-      }
-    },
-    ".write": false,
-    ".read": false
-  }
-}
+await dialogue.start();
+term.exec('/join general');
 ```
 
 ## TODO
@@ -103,14 +71,14 @@ To protect the data in your firebase real time database you can use thes rules:
   - [ ] Server-Sent Events / PHP [jcubic/chat](https://github.com/jcubic/chat)
   - [ ] Web Sockets / Node.js
   - [ ] WebRTC [CodePen](https://codepen.io/jcubic/pen/xxzjQRd)
-- [ ] Add a way to obtain a commerial License
 - [ ] /help command connected to UI
   - [ ] Terminal using less
   - [ ] Credits at the bottom of help
   - [ ] Maybe written in Markdown
+- [ ] Setup CLA
+- [ ] Add a way to obtain a commerial License
 - [ ] website with React+Firebase Chat above the fold
 - [ ] js.org domain
-
 
 ## License
 Copyright (c) 2024 [Jakub T. Jankiewicz](https://jakub.jankiewicz.org/)<br/>
